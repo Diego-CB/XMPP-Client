@@ -10,12 +10,16 @@ xmpp.on('online', data => {
 })
 
 xmpp.connect({
-  'jid': 'diegocordova@alumchat.xyz',
-  'password': 'password',
-  'host': 'localhost',
-  'port': 5022,
+  'jid': 'cordova20212gajim',
+  'password': '12345678',
+  'host': server_str,
 })
 
+xmpp.on('close', () => {
+	console.log('connection has been closed!');
+});
+
+/*
 xmpp.on('error', error => {
   console.log('Something went wrong', error)
 })
@@ -27,10 +31,9 @@ xmpp.on('chat', (from, message) => {
 // Send message
 xmpp.send()
 
-/**
- * Sends message every 5 seconds
- */
+// Sends message every 5 seconds
 const send = () => {
   setTimeout(send, 5000)
   xmpp.send('botalgo' + server_str, 'Hi bot!!')
 }
+*/
