@@ -1,39 +1,44 @@
-// Code based on Hussein Nasser project: https://www.youtube.com/watch?v=OVN99SgBGkM
 
-const xmpp = require('simple-xmpp')
 const server_str = '@alumchat.xyz'
 
-xmpp.on('online', data => {
-  console.log('Online')
-  console.log(`Connected as ${data.jid.user}`)
-  send()
-})
+const { client, xml } = require("@xmpp/client");
+const debug = require("@xmpp/debug");
 
-xmpp.connect({
-  'jid': 'cordova20212gajim',
-  'password': '12345678',
-  'host': server_str,
-})
-
-xmpp.on('close', () => {
-	console.log('connection has been closed!');
+const xmpp = client({
+  service: server_str,
+  domain: 5222,
+  username: "cordova20212test",
+  password: "12345678",
 });
 
-/*
-xmpp.on('error', error => {
-  console.log('Something went wrong', error)
-})
+debug(xmpp, true);
 
-xmpp.on('chat', (from, message) => {
-  console.log('Got message:', message, 'from', from)
-})
+xmpp.on("error", (err) => {
+  console.error(err);
+});
 
-// Send message
-xmpp.send()
+xmpp.on("offline", () => {
+  console.log("offline");
+});
 
-// Sends message every 5 seconds
-const send = () => {
-  setTimeout(send, 5000)
-  xmpp.send('botalgo' + server_str, 'Hi bot!!')
-}
-*/
+xmpp.on("stanza", async (stanza) => {
+  if (stanza.is("message")) {
+    await xmpp.send(xml("presence", { type: "unavailable" }));
+    await xmpp.stop();
+  }
+});
+
+xmpp.on("online", async (address) => {
+  // Makes itself available
+  await xmpp.send(xml("presence"));
+
+  // Sends a chat message to itself
+  const message = xml(
+    "message",
+    { type: "chat", to: address },
+    xml("body", {}, "hello world"),
+  );
+  await xmpp.send(message);
+});
+
+xmpp.start().catch(console.error);

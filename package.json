@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/Diego-CB/XMPP-Client#readme",
   "dependencies": {
+    "@xmpp/client": "^0.13.1",
+    "@xmpp/debug": "^0.13.0",
     "simple-xmpp": "^2.3.1"
   }
 }
