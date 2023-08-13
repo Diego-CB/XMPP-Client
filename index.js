@@ -1,42 +1,64 @@
 const server_str = '@alumchat.xyz'
 
 const { client, xml } = require("@xmpp/client");
-const debug = require("@xmpp/debug");
+    
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+class user {
+    constructor(username, password) {
+        this.username = username
+        this.password = password
+        console.log(this.username)
+        console.log(this.password)
+    }
 
-const xmpp = client({
-  service: 'xmpps://alumchat.xyz:5222',
-  username: "cordova20212gtest",
-  password: "12345678",
-});
+    async login() {
+        this.xmpp = client({
+            service: 'xmpp://alumchat.xyz:5222',
+            domain: 'alumchat.xyz',
+            username: this.username,
+            password: this.password,
+            terminal: true,
+            tls: {
+                rejectUnauthorized: false
+            },
+        })
 
-debug(xmpp, true);
+        this.xmpp.on("error", (err) => {
+            console.error(err);
+        });
+    
+        this.xmpp.on("offline", () => {
+            console.log("offline");
+        });
+    
+        this.xmpp.on("stanza", async (stanza) => {
+            if (stanza.is("message")) {
+                await xmpp.send(xml("presence", { type: "unavailable" }));
+                await xmpp.stop();
+            }
+        });
+    
+        this.xmpp.on("online", async (address) => {
+            console.log('Onlineeeee')
+            return
+            // Makes itself available
+            await xmpp.send(xml("presence"));
+    
+            // Sends a chat message to itself
+            const message = xml(
+                "message",
+                { type: "chat", to: address },
+                xml("body", {}, "hello world"),
+            );
+            await xmpp.send(message);
+        });
 
-xmpp.on("error", (err) => {
-  console.error(err);
-});
+        this.xmpp.start().catch(console.error);
+    }
+}
 
-xmpp.on("offline", () => {
-  console.log("offline");
-});
+username = 'cordova20212gtest'
+pass = 'huevos'
+const conn = new user(username, pass)
+conn.login()
 
-xmpp.on("stanza", async (stanza) => {
-  if (stanza.is("message")) {
-    await xmpp.send(xml("presence", { type: "unavailable" }));
-    await xmpp.stop();
-  }
-});
-
-xmpp.on("online", async (address) => {
-  // Makes itself available
-  await xmpp.send(xml("presence"));
-
-  // Sends a chat message to itself
-  const message = xml(
-    "message",
-    { type: "chat", to: address },
-    xml("body", {}, "hello world"),
-  );
-  await xmpp.send(message);
-});
-
-xmpp.start().catch(console.error);
