@@ -2,7 +2,7 @@ const server_str = '@alumchat.xyz'
 
 const { client, xml } = require("@xmpp/client");
     
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 class user {
     constructor(username, password) {
         this.username = username
