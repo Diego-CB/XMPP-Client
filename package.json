@@ -4,7 +4,7 @@
     "description": "XMPP client",
     "main": "index.js",
     "scripts": {
-        "start": "node index.js"
+        "start": "node --no-warnings index.js"
     },
     "repository": {
         "type": "git",
