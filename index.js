@@ -56,6 +56,11 @@ const main = async () => {
 
                 } else if (admin_option === '1') {
                     print('opcion:', admin_option)
+                    const username = await input('Ingrese su nombre de usuario: ')
+                    const pass = await input('Ingrese su contraseña: ')
+                    actual_usr = new User(username, pass)
+                    actual_usr.signin()
+                    console.log('>', username, ' creado y online')
 
                 } else if (admin_option === '2') {
                     print('opcion:', admin_option)
