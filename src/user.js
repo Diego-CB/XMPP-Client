@@ -1,4 +1,9 @@
-const { client, xml } = require("@xmpp/client");
+const { client, xml } = require("@xmpp/client")
+
+const admin = {
+    username: 'cordova20212gtest',
+    password: 'huevos',
+}
 
 class User {
     constructor(username, password) {
@@ -20,23 +25,23 @@ class User {
 
         this.xmpp.on("stanza", async (stanza) => {
             if (stanza.is("message")) {
-                await this.xmpp.send(xml("presence", { type: "unavailable" }));
-                await this.xmpp.stop();
+                await this.xmpp.send(xml("presence", { type: "unavailable" }))
+                await this.xmpp.stop()
             }
-        });
+        })
 
         return new Promise((resolve, reject) => {
             this.xmpp.on("online", async (address) => {
                 console.log('>', this.username, 'online')
                 resolve()
-            });
+            })
             
             this.xmpp.on("error", (err) => {
-                console.error(err);
+                console.error(err)
                 reject()
-            });
+            })
             
-            this.xmpp.start().catch(console.error);
+            this.xmpp.start().catch(console.error)
         })
     }
 
@@ -44,8 +49,8 @@ class User {
         this.xmpp = client({
             service: 'xmpp://alumchat.xyz:5222',
             domain: 'alumchat.xyz',
-            username: 'cordova20212gtest',
-            password: 'huevos',
+            username: admin.username,
+            password: admin.password,
             terminal: true,
             tls: {
                 rejectUnauthorized: false
@@ -53,9 +58,8 @@ class User {
         })
 
         this.xmpp.on("error", (err) => {
-            console.error(err);
-        });
-
+            console.error(err)
+        })
         
         return new Promise((resolve, reject) => {
             this.xmpp.start().then(() => {
@@ -77,12 +81,57 @@ class User {
                         console.log('> Error al registrar usuario')
                         reject()
                     }
-                });
+                })
 
             }).catch((error) => {
-                console.error("Error during registration:", error);
-            });
-        });
+                console.error("Error during registration:", error)
+            })
+        })
+    }
+
+    async deleteAccount() {
+        this.xmpp = client({
+            service: 'xmpp://alumchat.xyz:5222',
+            domain: 'alumchat.xyz',
+            username: admin.username,
+            password: admin.password,
+            terminal: true,
+            tls: {
+                rejectUnauthorized: false
+            },
+        })
+
+        this.xmpp.on("error", (err) => {
+            console.error(err)
+        })
+
+        
+        return new Promise((resolve, reject) => {
+
+            this.xmpp.start().then(() => {
+                // Envía una solicitud IQ para eliminar la cuenta
+                const iq = xml("iq", { type: "set", id: "deleteAccount1" },
+                    xml("query", { xmlns: "jabber:iq:register" },
+                        xml("remove", {}),
+                        xml("username", {}, this.username),
+                        xml("password", {}, this.password),
+                    )
+                )
+                this.xmpp.send(iq)
+
+                this.xmpp.on("stanza", async (stanza) => {
+                    // Escuchando respuestas IQ (Info/Query)
+                    if (stanza.is("iq") && stanza.attrs.type === "result") {
+                        console.log("Se elimino la cuenta")
+                        resolve()
+                    }
+                })
+
+            }).catch((error) => {
+                console.error("Error deleting account:", error)
+                reject()
+            })
+        })
     }
 }
 

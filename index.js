@@ -79,7 +79,10 @@ const main = async () => {
                     }
                     
                 } else if (admin_option === '4') {
-                    print('opcion:', admin_option)
+                    actual_usr.xmpp.stop()
+                    await actual_usr.deleteAccount()
+                    actual_usr.xmpp.stop()
+                    actual_usr = false
                     
                 } else {
                     print('ERROR: Ingrese una opcion valida\n')
