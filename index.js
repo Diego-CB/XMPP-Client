@@ -36,7 +36,7 @@ const main = async () => {
     print('---- Bienvenido al cliente CLI de XMPP ----')
 
     // global variables
-    let actual_usr
+    let actual_usr = false
 
     let option
     while (option !== 's') {
@@ -55,25 +55,25 @@ const main = async () => {
                     continue
 
                 } else if (admin_option === '1') {
-                    print('opcion:', admin_option)
                     const username = await input('Ingrese su nombre de usuario: ')
                     const pass = await input('Ingrese su contraseña: ')
                     actual_usr = new User(username, pass)
-                    actual_usr.signin()
-                    console.log('>', username, ' creado y online')
+                    await actual_usr.signin()
+                    actual_usr.xmpp.stop()
+                    actual_usr = false
 
                 } else if (admin_option === '2') {
-                    print('opcion:', admin_option)
                     const username = await input('Ingrese su nombre de usuario: ')
                     const pass = await input('Ingrese su contraseña: ')
                     actual_usr = new User(username, pass)
-                    actual_usr.login()
-                    console.log('>', username, 'online')
+                    await actual_usr.login()
+                    print(actual_usr.username)
                     
                 } else if (admin_option === '3') {
-                    if (actual_usr instanceof User) {
+                    if (actual_usr) {
                         actual_usr.xmpp.stop()
                         print('>', actual_usr.username, 'desconectado del servidor')
+                        actual_usr = false
                     } else {
                         print('No hay cuentas con login')
                     }
@@ -128,7 +128,7 @@ const main = async () => {
         }
     }
 
-    print('Gracias por usar el cleinte XMPP!!')
+    print('\nGracias por usar el cleinte XMPP!!')
 }
 
 main()
