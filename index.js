@@ -28,12 +28,11 @@ const menu_3 = '\n' +
     '> '
 
 const menu_4 = '\n' +
-    '1) Comunicación 1 a 1 con cualquier usuario/contacto\n' +
-    '2) Participar en conversaciones grupales\n' +
-    '3) Enviar/recibir archivos\n' +
+    '1) Enviar Mensajes Directos\n' +
+    '2) Enviar mensaje grupal\n' +
+    '3) Enviar archivos\n' +
     's) Salir\n' +
     '> '
-
 
 // Main
 const main = async () => {
@@ -186,9 +185,28 @@ const main = async () => {
                 if (comm_option === 's'){
                     continue
 
-                // Comunicación 1 a 1 con cualquier usuario/contacto
+                // DM's
                 } else if (comm_option === '1') {
-                    print('opcion:', comm_option)
+                    if (!actual_usr) {
+                        print('> No hay usuario con login')
+                        continue
+                    }
+
+                    await actual_usr.getContactList(false)
+                    const contact_list = actual_usr.contacts.reduce((acc, val) => {
+                        return acc +
+                            `${(actual_usr.contacts.indexOf(val) + 1).toString()}) ${val}\n` 
+                    }, '')
+
+                    const destin = actual_usr.contacts[
+                        parseInt(await input(
+                            'Seleccione usuario destino\n' +
+                            contact_list + '> '
+                        )) - 1
+                    ]
+
+                    const msg = await input('ingrese un mensjae: ')
+                    actual_usr.send_dm(destin, msg)
 
                 // Participar en conversaciones grupales
                 } else if (comm_option === '2') {

@@ -12,6 +12,7 @@ class User {
         this.username = username
         this.password = password
         this.xmpp = undefined
+        this.contacts = []
     }
 
     #restart_xmpp(admin_usr = false) {
@@ -30,16 +31,44 @@ class User {
     async login() {
         this.xmpp = this.#restart_xmpp()
 
+        // Notificaciones
         this.xmpp.on('stanza', (stanza) => {
-            if (stanza.is('message') && stanza.attrs.type == 'chat') {
-                const from = stanza.attrs.from.split('@')[0]
-                const body = stanza.getChildText('body')
-                print(`-[${from}]-> ${body}`)
+            if (stanza.is('message')) {
+
+                // Recibir mensajes directos
+                if (stanza.attrs.type == 'chat') {
+                    const from = stanza.attrs.from.split('@')[0]
+                    const body = stanza.getChildText('body')
+                    print(`-[${from}]-> ${body}`)
+
+                    // Recibir archivos adjuntos
+                    const att = stanza.getChild('attachment')
+                    if (att) {
+                        print(att)
+                    }
+                    
+                    // Recibir mensajes grupales
+                } else if (stanza.attrs.type == 'groupchat') {
+                    const group = stanza.attrs.from.split('@')[0]
+                    const from = stanza.attrs.from.split('/')[1]
+                    const body = stanza.getChildText('body')
+                    print(`-[${group}:${from}]-> ${body}`)
+                    
+                    // Recibir archivos adjuntos
+                    const att = stanza.getChild('attachment')
+                    if (att) {
+                        print(att)
+                    }
+                }
+
 
             } else if (stanza.is('presence')) {
+                // Aceptar solicitudes de contacto entrantes
                 if (stanza.attrs.type === 'subscribe') {
                     const request_stanza = xml('presence', { type: 'subscribed', to: stanza.attrs.from })
                     this.xmpp.send(request_stanza)
+
+                // Recibir cambios de status de contactos
                 } else {
                     const from = stanza.attrs.from.split('@')[0]
                     const status = stanza.getChildText('status')
@@ -148,7 +177,19 @@ class User {
         print('> Se cambio la presencia a:', new_presence)
     }
 
-    async getContactList() {
+    send_dm(destin, msg) {
+        const msg_stanza = xml(
+            'message', {
+                from: this.username + '@alumchat.xyz', 
+                to: destin + '@alumchat.xyz'
+            },
+            xml('body', {}, msg)
+        )
+        this.xmpp.send(msg_stanza)
+        print('> Se envio mensaje a', destin)  
+    }
+
+    async getContactList(to_print=true) {
         const local_xmpp = this.#restart_xmpp()
 
         local_xmpp.on('error', (err) => {
@@ -165,10 +206,16 @@ class User {
                     // Escuchando presencias entrantes
                     if (stanza.is('presence') && stanza.attrs.type !== 'error') {
                         const usr = stanza.attrs.from.split('@')[0]
-                        const status = stanza.getChildText('status')
+                        if (usr !== this.username) {
 
-                        if (usr !== this.username){
-                            print(`> ${usr}: ${status || 'unavailable'}`)
+                            if (!this.contacts.includes(usr)) {
+                                this.contacts.push(usr)
+                            }
+                            
+                            if (to_print) {
+                                const status = stanza.getChildText('status')
+                                print(`> ${usr}: ${status || 'unavailable'}`)
+                            }
                         }
                     } else {
                         resolve()
