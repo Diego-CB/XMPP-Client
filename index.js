@@ -22,17 +22,15 @@ const menu_3 = '\n' +
     '--------------------------------------------\n' +
     '1) Mostrar todos los contactos y su estado\n' +
     '2) Agregar un usuario a los contactos\n' +
-    '3) Aceptar solicitud de contacto\n' +
-    '4) Mostrar detalles de contacto de un usuario\n' +
-    '5) Definir mensaje de presencia\n' +
+    '3) Mostrar detalles de contacto de un usuario\n' +
+    '4) Definir mensaje de presencia\n' +
     's) Salir\n' +
     '> '
 
 const menu_4 = '\n' +
     '1) Comunicación 1 a 1 con cualquier usuario/contacto\n' +
     '2) Participar en conversaciones grupales\n' +
-    '3) Enviar/recibir notificaciones\n' +
-    '4) Enviar/recibir archivos\n' +
+    '3) Enviar/recibir archivos\n' +
     's) Salir\n' +
     '> '
 
@@ -71,7 +69,6 @@ const main = async () => {
 
                     try {
                         await actual_usr.signin()
-                        await actual_usr.xmpp.stop()
                         actual_usr = false
                     } catch (error) {
                         print('> Error al registar usuario')
@@ -110,9 +107,7 @@ const main = async () => {
                 } else if (admin_option === '4') {
 
                     try {
-                        await actual_usr.xmpp.stop()
                         await actual_usr.deleteAccount()
-                        await actual_usr.xmpp.stop()
                         actual_usr = false
                     } catch (error) {
                         print('Error al eliminar cuenta')
@@ -140,8 +135,6 @@ const main = async () => {
                     }
                     
                     await actual_usr.getContactList()
-                    await actual_usr.xmpp.stop()
-                    await actual_usr.login()
                 
                 // Enviar solicitud de contacto
                 } else if (comm_option === '2') {
@@ -158,28 +151,13 @@ const main = async () => {
                         print('> ERROR al agregar contacto, intente de nuevo\n')
                     }
                     
-                // Aceptar solicitud de contacto
-                } else if (comm_option === '3') {
-                    if (!actual_usr) {
-                        print('> No hay usuario con login')
-                        continue
-                    }
-                    
-                    const new_friend = await input('Ingrese el nuevo contacto: ')
-
-                    try {
-                        actual_usr.accept_frind_request(new_friend)
-                    } catch(e) {
-                        print('> ERROR al agregar contacto, intente de nuevo\n')
-                    }
-                    
                 // Mostrar detalles de un contacto
-                } else if (comm_option === '4') {
+                } else if (comm_option === '3') {
                     const contact = await input('Ingrese un contacto: ')
                     await actual_usr.getContact_info(contact)
                 
                 // Definir mensaje de presencia
-                } else if (comm_option === '5') {
+                } else if (comm_option === '4') {
                     if (!actual_usr) {
                         print('> No hay usuario con login')
                         continue
@@ -215,13 +193,9 @@ const main = async () => {
                 // Participar en conversaciones grupales
                 } else if (comm_option === '2') {
                     print('opcion:', comm_option)
-
-                // Enviar/recibir notificaciones
-                } else if (comm_option === '3') {
-                    print('opcion:', comm_option)
                     
                 // Enviar/recibir archivos
-                } else if (comm_option === '4') {
+                } else if (comm_option === '3') {
                     print('opcion:', comm_option)
 
                 } else {
@@ -235,7 +209,7 @@ const main = async () => {
 
     if (actual_usr) {
         print('> Desconectando del servidor')
-        await await actual_usr.xmpp.stop()
+        await actual_usr.xmpp.stop()
     }
 
     print('\nGracias por usar el cleinte XMPP!!')

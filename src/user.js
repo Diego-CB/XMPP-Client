@@ -15,7 +15,7 @@ class User {
     }
 
     #restart_xmpp(admin_usr = false) {
-        this.xmpp = client({
+        return client({
             service: 'xmpp://alumchat.xyz:5222',
             domain: 'alumchat.xyz',
             username: admin_usr ? this.username : admin.username,
@@ -28,13 +28,25 @@ class User {
     }
 
     async login() {
-        this.#restart_xmpp()
+        this.xmpp = this.#restart_xmpp()
 
         this.xmpp.on('stanza', (stanza) => {
             if (stanza.is('message') && stanza.attrs.type == 'chat') {
                 const from = stanza.attrs.from.split('@')[0]
                 const body = stanza.getChildText('body')
                 print(`-[${from}]-> ${body}`)
+
+            } else if (stanza.is('presence')) {
+                if (stanza.attrs.type === 'subscribe') {
+                    const request_stanza = xml('presence', { type: 'subscribed', to: stanza.attrs.from })
+                    this.xmpp.send(request_stanza)
+                } else {
+                    const from = stanza.attrs.from.split('@')[0]
+                    const status = stanza.getChildText('status')
+                    if (status) {
+                        print(`-[status:${from}]-> ${status}`)
+                    }
+                }
             }
         })
         
@@ -55,19 +67,19 @@ class User {
     }
 
     async signin() {
-        this.#restart_xmpp(admin=true)
+        const local_xmpp = this.#restart_xmpp(admin=true)
 
-        return new Promise((resolve, reject) => {
-            this.xmpp.start().then(() => {
+        await new Promise((resolve, reject) => {
+            local_xmpp.start().then(() => {
                 const iq = xml('iq', { type: 'set', id: 'register1' },
                     xml('query', { xmlns: 'jabber:iq:register' },
                         xml('username', {}, this.username),
                         xml('password', {}, this.password),
                     )
                 )
-                this.xmpp.send(iq)
+                local_xmpp.send(iq)
 
-                this.xmpp.on('stanza', async (stanza) => {
+                local_xmpp.on('stanza', async (stanza) => {
                     // Escuchando respuestas IQ (Info/Query)
                     if (stanza.is('iq') && stanza.attrs.type === 'result') {
                         print('>', this.username, 'registrado')
@@ -82,18 +94,20 @@ class User {
                 reject(error)
             })
         })
+
+        await local_xmpp.stop()
     }
 
     async deleteAccount() {
-        this.#restart_xmpp(admin=true)
+        const local_xmpp = this.#restart_xmpp(admin=true)
         
-        return new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
     
-            this.xmpp.on('error', (err) => {
+            local_xmpp.on('error', (err) => {
                 reject(err)
             })
             
-            this.xmpp.start().then(() => {
+            local_xmpp.start().then(() => {
                 // Envía una solicitud IQ para eliminar la cuenta
                 const iq = xml('iq', { type: 'set', id: 'deleteAccount1' },
                     xml('query', { xmlns: 'jabber:iq:register' },
@@ -102,9 +116,9 @@ class User {
                         xml('password', {}, this.password),
                     )
                 )
-                this.xmpp.send(iq)
+                local_xmpp.send(iq)
 
-                this.xmpp.on('stanza', async (stanza) => {
+                local_xmpp.on('stanza', async (stanza) => {
                     // Escuchando respuestas IQ (Info/Query)
                     if (stanza.is('iq') && stanza.attrs.type === 'result') {
                         print('Se elimino la cuenta')
@@ -116,6 +130,8 @@ class User {
                 reject(error)
             })
         })
+
+        await local_xmpp.stop()
     }
 
     friendRequest(new_friend) {
@@ -124,14 +140,7 @@ class User {
         print('> Solicitud de contacto enviada')
     }
 
-    accept_frind_request(new_friend) {
-        const request_stanza = xml('presence', { type: 'subscribed', to: new_friend+ '@alumchat.xyz' })
-        this.xmpp.send(request_stanza)
-        print('> Se acepto la solicitud de', new_friend)
-    }
-
     change_presence(new_presence) {
-        print('entro presencia')
         const presence = xml('presence', {},
             xml('status', {}, new_presence)
         )
@@ -140,28 +149,26 @@ class User {
     }
 
     async getContactList() {
-        await this.xmpp.stop()
-        this.#restart_xmpp()
+        const local_xmpp = this.#restart_xmpp()
 
-        this.xmpp.on('error', (err) => {
+        local_xmpp.on('error', (err) => {
             console.error(err)
         })
-
         
-        return new Promise((resolve, reject) => {
-            this.xmpp.start().then(() => {
+        await new Promise((resolve, reject) => {
+            local_xmpp.start().then(() => {
                 // Envía una solicitud de presencia inicial para obtener la lista de contactos
                 const presence = xml('presence')
-                this.xmpp.send(presence)
+                local_xmpp.send(presence)
 
-                this.xmpp.on('stanza', async (stanza) => {
+                local_xmpp.on('stanza', async (stanza) => {
                     // Escuchando presencias entrantes
                     if (stanza.is('presence') && stanza.attrs.type !== 'error') {
-                        const usr = stanza.attrs.from
-                        const status = stanza.getChildText('show')
+                        const usr = stanza.attrs.from.split('@')[0]
+                        const status = stanza.getChildText('status')
 
                         if (usr !== this.username){
-                            print(`> ${usr}: ${status || 'online'}`)
+                            print(`> ${usr}: ${status || 'unavailable'}`)
                         }
                     } else {
                         resolve()
@@ -171,32 +178,43 @@ class User {
                 console.error('Error getting contact list:', error)
             })
         })
+
+        await local_xmpp.stop()
     }
 
     async getContact_info(contact) {
-        await this.xmpp.stop()
-        this.#restart_xmpp()
+        const local_xmpp = this.#restart_xmpp()
         contact = contact + '@alumchat.xyz'
 
         await new Promise((resolve, reject) => {
-            this.xmpp.on('stanza', async (stanza) => {
+            local_xmpp.on('stanza', async (stanza) => {
                 if (stanza.is('iq') && stanza.attrs.type === 'result') {
                     const queryElement = stanza.getChild('query', 'jabber:iq:roster')
                     if (queryElement) {
                         const itemElement = queryElement.getChildren('item')
                         if (itemElement.length > 0) {
                             let founded = 0
-                            const item = itemElement.map(i => {
-                                // print(i)
-                                // print(i.attrs.jid)
-                                // print(i.attrs.subscription)
-
+                            itemElement.map(i => {
                                 if (i.attrs.jid === contact) {
-                                    const name = i.attrs.jid
-                                    const subscription = i.attrs.subscription
+                                    print('JID:', i.attrs.jid)
+
+                                    try {
+                                        const name = i.attrs.name
+                                        print('Nombre:', name)
+                                    } catch (error) {}
+                                    
+                                    try {
+                                        const email = i.attrs.email
+                                        print('Email:', email)
+                                    } catch (error) {}
+                                    
+                                    let subscription = i.attrs.subscription
+                                    subscription = (subscription === 'to') 
+                                        ? 'Estas subscrito' 
+                                        : (subscription === 'none') ? 'Le enviaste solicitud'
+                                            : 'Ambos estan subscritos'
+                                    print('Subscription:', subscription)
         
-                                    console.log('Contact JID:', name)
-                                    console.log('Subscription Status:', subscription)
                                     founded++
                                 }
                             })
@@ -210,19 +228,17 @@ class User {
                 }
             })
 
-            this.xmpp.start().then(() => {
-                // Envía una solicitud IQ de consulta para obtener detalles del contacto
-                const iq = xml('iq', { type: 'get', id: 'contactDetails1' },
-                    xml('query', { xmlns: 'jabber:iq:roster' })
+            local_xmpp.start().then(() => {
+                const iq = xml('iq', {type:'get'},
+                    xml('query', { xmlns: 'jabber:iq:roster'})
                 )
-                this.xmpp.send(iq)
+                local_xmpp.send(iq)
             }).catch((error) => {
                 console.error('Error getting contact details:', error)
             })
         })
 
-        await this.xmpp.stop()
-        await this.login()
+        await local_xmpp.stop()
     }
 }
 
