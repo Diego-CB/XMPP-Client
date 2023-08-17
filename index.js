@@ -206,15 +206,36 @@ const main = async () => {
                     ]
 
                     const msg = await input('ingrese un mensjae: ')
-                    actual_usr.send_dm(destin, msg)
+                    await actual_usr.send_dm(destin, msg)
 
                 // Participar en conversaciones grupales
                 } else if (comm_option === '2') {
                     print('opcion:', comm_option)
                     
-                // Enviar/recibir archivos
+                // Enviar archivos
                 } else if (comm_option === '3') {
-                    print('opcion:', comm_option)
+                    if (!actual_usr) {
+                        print('> No hay usuario con login')
+                        continue
+                    }
+
+                    await actual_usr.getContactList(false)
+                    const contact_list = actual_usr.contacts.reduce((acc, val) => {
+                        return acc +
+                            `${(actual_usr.contacts.indexOf(val) + 1).toString()}) ${val}\n` 
+                    }, '')
+
+                    const destin = actual_usr.contacts[
+                        parseInt(await input(
+                            'Seleccione usuario destino\n' +
+                            contact_list + '> '
+                        )) - 1
+                    ]
+
+                    const msg = await input('ingrese un mensjae: ')
+                    const filepath = await input('Ingrese path del archivo: ')
+
+                    actual_usr.send_file(destin, msg, filepath)
 
                 } else {
                     print('ERROR: Ingrese una opcion valida\n')

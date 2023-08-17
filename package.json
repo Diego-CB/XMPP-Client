@@ -19,6 +19,7 @@
     "dependencies": {
         "@xmpp/client": "^0.13.1",
         "@xmpp/debug": "^0.13.0",
+        "fs": "^0.0.1-security",
         "net": "^1.0.2"
     }
 }

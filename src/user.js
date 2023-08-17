@@ -1,5 +1,5 @@
 const { client, xml } = require('@xmpp/client')
-
+const fs = require('fs');
 const { print } = require('./util')
 
 const admin = {
@@ -187,6 +187,24 @@ class User {
         )
         this.xmpp.send(msg_stanza)
         print('> Se envio mensaje a', destin)  
+    }
+
+    async send_file(destin, msg, filePath) {
+        const fileData = fs.readFileSync(filePath, { encoding: 'base64' })
+
+        const file_stanza = xml(
+          'message',
+          { to: destin + '@alumchat.xyz', type: 'chat' },
+          xml('body', {}, msg),
+          xml('attachment', { 
+            xmlns: 'urn:xmpp:attachment',
+            id: 'attachment1',
+            encoding: 'base64'
+            }, fileData)
+        )
+
+        await this.xmpp.send(file_stanza)
+        print(`> Archivo ${filePath} enviado a: ${destin}`)
     }
 
     async getContactList(to_print=true) {
