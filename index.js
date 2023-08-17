@@ -140,7 +140,7 @@ const main = async () => {
                     }
                     
                     await actual_usr.getContactList()
-                    await await actual_usr.xmpp.stop()
+                    await actual_usr.xmpp.stop()
                     await actual_usr.login()
                 
                 // Enviar solicitud de contacto
