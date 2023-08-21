@@ -61,27 +61,30 @@ const main = async () => {
 
                 // Registrar nueva cuenta
                 } else if (admin_option === '1') {
-                const username = await input('Ingrese su nombre de usuario: ')
+                    const username = await input('Ingrese su nombre de usuario: ')
                     const pass = await input('Ingrese su contraseña: ')
                     
-                    actual_usr = new User(username, pass)
+                    const new_usr = new User(username, pass)
+                    await new_usr.signin()
 
-                    try {
-                        await actual_usr.signin()
-                        actual_usr = false
-                    } catch (error) {
-                        print('> Error al registar usuario')
-                    }
+                    // try {
+                    //     await new_usr.signin()
+                    // } catch (error) {
+                    //     print('> Error al registar usuario')
+                    // }
                     
                 // Login
                 } else if (admin_option === '2') {
                     const username = await input('Ingrese su nombre de usuario: ')
                     const pass = await input('Ingrese su contraseña: ')
 
-                    if (actual_usr) await actual_usr.xmpp.stop()
-                    actual_usr = new User(username, pass)
-                
+                    if (actual_usr) {
+                        await actual_usr.change_presence('offline')
+                        await actual_usr.xmpp.stop()
+                    } 
+                    
                     try {
+                        actual_usr = new User(username, pass)
                         await actual_usr.login()
                     } catch (error) {
                         print('> Error al hacer login')
@@ -95,6 +98,7 @@ const main = async () => {
                     }
 
                     try {
+                        await actual_usr.change_presence('offline')
                         await actual_usr.xmpp.stop()
                         print('>', actual_usr.username, 'desconectado del servidor')
                         actual_usr = false
@@ -232,10 +236,9 @@ const main = async () => {
                         )) - 1
                     ]
 
-                    const msg = await input('ingrese un mensjae: ')
                     const filepath = await input('Ingrese path del archivo: ')
 
-                    actual_usr.send_file(destin, msg, filepath)
+                    await actual_usr.send_file(destin, filepath)
 
                 } else {
                     print('ERROR: Ingrese una opcion valida\n')
@@ -247,8 +250,9 @@ const main = async () => {
     }
 
     if (actual_usr) {
-        print('> Desconectando del servidor')
+        await actual_usr.change_presence('offline')
         await actual_usr.xmpp.stop()
+        print('> Desconectando del servidor')
     }
 
     print('\nGracias por usar el cleinte XMPP!!')

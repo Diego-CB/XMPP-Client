@@ -16,11 +16,13 @@ class User {
     }
 
     #restart_xmpp(admin_usr = false) {
+        const username = admin_usr ? admin.username : this.username
+        const password = admin_usr ? admin.password : this.password
         return client({
             service: 'xmpp://alumchat.xyz:5222',
             domain: 'alumchat.xyz',
-            username: admin_usr ? this.username : admin.username,
-            password: admin_usr ? this.password : admin.password,
+            username,
+            password,
             terminal: true,
             tls: {
                 rejectUnauthorized: false
@@ -39,12 +41,17 @@ class User {
                 if (stanza.attrs.type == 'chat') {
                     const from = stanza.attrs.from.split('@')[0]
                     const body = stanza.getChildText('body')
-                    print(`-[${from}]-> ${body}`)
-
+                    
                     // Recibir archivos adjuntos
-                    const att = stanza.getChild('attachment')
-                    if (att) {
-                        print(att)
+                    const coded_data = stanza.getChildText('attachment')
+                    if (coded_data) {
+                        const decodedData = Buffer.from(coded_data, 'base64');
+                        const filepath = `./files/${body}`
+                        fs.writeFileSync(filepath, decodedData);
+                        print(`-[${from}]-> ${body}`)
+                        print('> archivo recibido guardado en:', filepath)
+                    } else {
+                        print(`-[${from}]-> ${body}`)
                     }
                     
                     // Recibir mensajes grupales
@@ -55,9 +62,12 @@ class User {
                     print(`-[${group}:${from}]-> ${body}`)
                     
                     // Recibir archivos adjuntos
-                    const att = stanza.getChild('attachment')
-                    if (att) {
-                        print(att)
+                    const coded_data = stanza.getChildText('attachment')
+                    if (coded_data) {
+                        const decodedData = Buffer.from(coded_data, 'base64');
+                        const filepath = `./files/${body}.txt`
+                        fs.writeFileSync(filepath, decodedData);
+                        print('> archivo recibido guardado en:', filepath)
                     }
                 }
 
@@ -67,13 +77,16 @@ class User {
                 if (stanza.attrs.type === 'subscribe') {
                     const request_stanza = xml('presence', { type: 'subscribed', to: stanza.attrs.from })
                     this.xmpp.send(request_stanza)
+                    print('> Se acepto solicitud de:', stanza.attrs.from.split('@')[0])
 
                 // Recibir cambios de status de contactos
                 } else {
                     const from = stanza.attrs.from.split('@')[0]
-                    const status = stanza.getChildText('status')
-                    if (status) {
-                        print(`-[status:${from}]-> ${status}`)
+                    if (from != this.username) {
+                        const status = stanza.getChildText('status')
+                        if (status) {
+                            print(`-[status:${from}]-> ${status}`)
+                        }
                     }
                 }
             }
@@ -81,8 +94,11 @@ class User {
         
         return new Promise((resolve, reject) => {
             this.xmpp.on('online', async (address) => {
-                const online_stanza = xml('presence', { type: 'online' })
-                this.xmpp.send(online_stanza)
+                const online_stanza = xml('presence', {},
+                    xml('show', {}, 'available')
+                )
+                await this.xmpp.send(online_stanza)
+
                 print('>', this.username, 'online')
                 resolve()
             })
@@ -91,12 +107,13 @@ class User {
                 reject(err)
             })
             
+            
             this.xmpp.start().catch(reject)
         })
     }
 
     async signin() {
-        const local_xmpp = this.#restart_xmpp(admin=true)
+        const local_xmpp = this.#restart_xmpp(true)
 
         await new Promise((resolve, reject) => {
             local_xmpp.start().then(() => {
@@ -128,7 +145,7 @@ class User {
     }
 
     async deleteAccount() {
-        const local_xmpp = this.#restart_xmpp(admin=true)
+        const local_xmpp = this.#restart_xmpp(true)
         
         await new Promise((resolve, reject) => {
     
@@ -163,35 +180,36 @@ class User {
         await local_xmpp.stop()
     }
 
-    friendRequest(new_friend) {
+    async friendRequest(new_friend) {
         const request_stanza = xml('presence', { type: 'subscribe', to: new_friend+ '@alumchat.xyz' })
-        this.xmpp.send(request_stanza)
+        await this.xmpp.send(request_stanza)
         print('> Solicitud de contacto enviada')
     }
 
-    change_presence(new_presence) {
+    async change_presence(new_presence) {
         const presence = xml('presence', {},
             xml('status', {}, new_presence)
         )
-        this.xmpp.send(presence)
+        await this.xmpp.send(presence)
         print('> Se cambio la presencia a:', new_presence)
     }
 
-    send_dm(destin, msg) {
+    async send_dm(destin, msg) {
         const msg_stanza = xml(
             'message', {
                 from: this.username + '@alumchat.xyz', 
-                to: destin + '@alumchat.xyz'
+                to: destin + '@alumchat.xyz',
+                type: 'chat',
             },
             xml('body', {}, msg)
         )
-        this.xmpp.send(msg_stanza)
+        await this.xmpp.send(msg_stanza)
         print('> Se envio mensaje a', destin)  
     }
 
-    async send_file(destin, msg, filePath) {
+    async send_file(destin, filePath) {
         const fileData = fs.readFileSync(filePath, { encoding: 'base64' })
-
+        const msg = filePath.replace('./', '')
         const file_stanza = xml(
           'message',
           { to: destin + '@alumchat.xyz', type: 'chat' },
@@ -215,6 +233,7 @@ class User {
         })
         
         await new Promise((resolve, reject) => {
+            let user_count = 0
             local_xmpp.start().then(() => {
                 // Envía una solicitud de presencia inicial para obtener la lista de contactos
                 const presence = xml('presence')
@@ -228,6 +247,7 @@ class User {
 
                             if (!this.contacts.includes(usr)) {
                                 this.contacts.push(usr)
+                                user_count++
                             }
                             
                             if (to_print) {
