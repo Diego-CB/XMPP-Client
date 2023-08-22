@@ -54,21 +54,12 @@ class User {
                         print(`-[${from}]-> ${body}`)
                     }
                     
-                    // Recibir mensajes grupales
+                // Recibir mensajes grupales
                 } else if (stanza.attrs.type == 'groupchat') {
                     const group = stanza.attrs.from.split('@')[0]
                     const from = stanza.attrs.from.split('/')[1]
                     const body = stanza.getChildText('body')
                     print(`-[${group}:${from}]-> ${body}`)
-                    
-                    // Recibir archivos adjuntos
-                    const coded_data = stanza.getChildText('attachment')
-                    if (coded_data) {
-                        const decodedData = Buffer.from(coded_data, 'base64');
-                        const filepath = `./files/${body}.txt`
-                        fs.writeFileSync(filepath, decodedData);
-                        print('> archivo recibido guardado en:', filepath)
-                    }
                 }
 
 
@@ -211,13 +202,13 @@ class User {
         const fileData = fs.readFileSync(filePath, { encoding: 'base64' })
         const msg = filePath.replace('./', '')
         const file_stanza = xml(
-          'message',
-          { to: destin + '@alumchat.xyz', type: 'chat' },
-          xml('body', {}, msg),
-          xml('attachment', { 
-            xmlns: 'urn:xmpp:attachment',
-            id: 'attachment1',
-            encoding: 'base64'
+            'message',
+            { to: destin + '@alumchat.xyz', type: 'chat' },
+            xml('body', {}, msg),
+            xml('attachment', { 
+                xmlns: 'urn:xmpp:attachment',
+                id: 'attachment1',
+                encoding: 'base64'
             }, fileData)
         )
 
@@ -325,7 +316,72 @@ class User {
 
         await local_xmpp.stop()
     }
+    
+    async createGroupChat(grupo) {
+        const group_stanza = xml( 'presence', {
+                to: `${grupo}@conference.alumchat.xyz/${this.username}`,
+                from: `${this.username}@conference.alumchat.xyz/${this.username}`
+            },
+            xml( 'x', { xmlns: 'http://jabber.org/protocol/muc#user'},
+                xml( 'item', {
+                    jid: `${userJID}`,
+                    affiliation: 'owner',
+                    role: 'moderator'
+                })
+            )   
+        )
+        
+        try {
+            await this.xmpp.send(group_stanza)
+            print('> Se creo el grupo exitosamente')
+
+        } catch (error) {
+            print('> Error al crear grupo')   
+        }
+    }
+
+    async send_groupChat(destin, msg) {
+        // TODO 
+        const msg_stanza = xml(
+            'message', {
+                from: this.username + '@alumchat.xyz', 
+                to: destin + '@alumchat.xyz',
+                type: 'chat',
+            },
+            xml('body', {}, msg)
+        )
+
+        try {
+            await this.xmpp.send(msg_stanza)
+            print('> Se envio mensaje al grupo', destin)  
+            
+        } catch (error) {
+            print('> Error al enviar mensaje al grupo', destin)  
+        }
+    }
+
+    async invite_groupChat(grupo, contact) {
+
+        try {
+            const invite_stanza = xml( "iq", { xmlns:"jabber:client", to: `${grupo}@conference.alumchat.xyz`, type: "set" },
+                xml("query", { xmlns: "http://jabber.org/protocol/muc#admin" },
+                xml("item", { jid: `${contact}@alumchat.xyz`, affiliation: "member" })
+            ))
+            await this.xmpp.send(invite_stanza)
+            print('> Se invito a', contact, 'al grupo', grupo)
+            
+        } catch (error) {
+            print('> Error al invitar a', contact, 'al grupo', grupo)
+            
+        }
+        
+        const notification_stanza = xml( "message", {xmlns:"jabber:client", to: `${person}@alumchat.xyz`},
+            xml("x", { xmlns:"jabber:x:conference" , jid: `${room}@conference.alumchat.xyz` })
+        )
+        await this.xmpp.send(notification_stanza)
+    }
 }
+
 
 module.exports = {
     User

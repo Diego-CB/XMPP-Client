@@ -29,8 +29,9 @@ const menu_3 = '\n' +
 
 const menu_4 = '\n' +
     '1) Enviar Mensajes Directos\n' +
-    '2) Enviar mensaje grupal\n' +
-    '3) Enviar archivos\n' +
+    '2) Crear chat grupal\n' +
+    '3) Enviar Mensajes grupales\n' +
+    '4) Enviar archivos\n' +
     's) Salir\n' +
     '> '
 
@@ -212,12 +213,40 @@ const main = async () => {
                     const msg = await input('ingrese un mensjae: ')
                     await actual_usr.send_dm(destin, msg)
 
-                // Participar en conversaciones grupales
+                // Crear chat grupal
                 } else if (comm_option === '2') {
-                    print('opcion:', comm_option)
+                    if (!actual_usr) {
+                        print('> No hay usuario con login')
+                        continue
+                    }
+    
+                    const grupo = await input('Ingrese el nombre de grupo: ')
+                    await actual_usr.createGroupChat(grupo)
+                    
+                // Invitar a chat grupal
+                } else if (comm_option === '3') {
+                    if (!actual_usr) {
+                        print('> No hay usuario con login')
+                        continue
+                    }
+    
+                    const grupo = await input('Ingrese el nombre de grupo: ')
+                    const contact = await input('Ingrese el nombre del contacto: ')
+                    await actual_usr.invite_groupChat(grupo, contact)
+                
+                // Enviar mensajes grupales
+                } else if (comm_option === '4') {
+                    if (!actual_usr) {
+                        print('> No hay usuario con login')
+                        continue
+                    }
+    
+                    const grupo = await input('Ingrese el nombre de grupo: ')
+                    const msg = await input('Ingrese el mensaje: ')
+                    await actual_usr.send_groupChat(grupo, msg)
                     
                 // Enviar archivos
-                } else if (comm_option === '3') {
+                } else if (comm_option === '5') {
                     if (!actual_usr) {
                         print('> No hay usuario con login')
                         continue
