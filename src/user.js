@@ -21,8 +21,8 @@ class User {
         return client({
             service: 'xmpp://alumchat.xyz:5222',
             domain: 'alumchat.xyz',
-            username,
-            password,
+            username: username,
+            password: password,
             terminal: true,
             tls: {
                 rejectUnauthorized: false
@@ -59,10 +59,11 @@ class User {
                     const group = stanza.attrs.from.split('@')[0]
                     const from = stanza.attrs.from.split('/')[1]
                     const body = stanza.getChildText('body')
-                    print(`-[${group}:${from}]-> ${body}`)
+                    if (body && from) {
+                        print(`-[${group}:${from}]-> ${body}`)
+                    }
                 }
-
-
+            
             } else if (stanza.is('presence')) {
                 // Aceptar solicitudes de contacto entrantes
                 if (stanza.attrs.type === 'subscribe') {
@@ -137,31 +138,34 @@ class User {
 
     async deleteAccount() {
         const local_xmpp = this.#restart_xmpp(true)
+        print(local_xmpp)
         
         await new Promise((resolve, reject) => {
     
             local_xmpp.on('error', (err) => {
                 reject(err)
             })
+
+            local_xmpp.on('stanza', async (stanza) => {
+                // Escuchando respuestas IQ (Info/Query)
+                if (stanza.is('iq') && stanza.attrs.type === 'result') {
+                    print('Se elimino la cuenta')
+                    resolve()
+                }
+            })
             
             local_xmpp.start().then(() => {
+                print('empezo')
                 // Envía una solicitud IQ para eliminar la cuenta
                 const iq = xml('iq', { type: 'set', id: 'deleteAccount1' },
                     xml('query', { xmlns: 'jabber:iq:register' },
-                        xml('remove', {}),
-                        xml('username', {}, this.username),
-                        xml('password', {}, this.password),
+                        xml('remove', {},
+                            xml('username', {}, this.username)
+                        ),
                     )
                 )
+                print(iq)
                 local_xmpp.send(iq)
-
-                local_xmpp.on('stanza', async (stanza) => {
-                    // Escuchando respuestas IQ (Info/Query)
-                    if (stanza.is('iq') && stanza.attrs.type === 'result') {
-                        print('Se elimino la cuenta')
-                        resolve()
-                    }
-                })
 
             }).catch((error) => {
                 reject(error)
@@ -324,7 +328,7 @@ class User {
             },
             xml( 'x', { xmlns: 'http://jabber.org/protocol/muc#user'},
                 xml( 'item', {
-                    jid: `${userJID}`,
+                    jid: `${this.username}`,
                     affiliation: 'owner',
                     role: 'moderator'
                 })
@@ -341,12 +345,11 @@ class User {
     }
 
     async send_groupChat(destin, msg) {
-        // TODO 
         const msg_stanza = xml(
             'message', {
                 from: this.username + '@alumchat.xyz', 
-                to: destin + '@alumchat.xyz',
-                type: 'chat',
+                to: `${destin}@conference.alumchat.xyz`,
+                type: 'groupchat',
             },
             xml('body', {}, msg)
         )
@@ -374,14 +377,18 @@ class User {
             print('> Error al invitar a', contact, 'al grupo', grupo)
             
         }
-        
-        const notification_stanza = xml( "message", {xmlns:"jabber:client", to: `${person}@alumchat.xyz`},
-            xml("x", { xmlns:"jabber:x:conference" , jid: `${room}@conference.alumchat.xyz` })
+    }
+
+    async accept_invite(grupo) {
+        const accept_stanza = xml("presence", {
+                xmlns:"jabber:client",
+                to: `${grupo}@conference.alumchat.xyz/${this.username}`,
+            }, xml("x", {xmlns:"http://jabber.org/protocol/muc"})
         )
-        await this.xmpp.send(notification_stanza)
+
+        await this.xmpp.send(accept_stanza)
     }
 }
-
 
 module.exports = {
     User

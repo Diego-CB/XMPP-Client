@@ -30,8 +30,10 @@ const menu_3 = '\n' +
 const menu_4 = '\n' +
     '1) Enviar Mensajes Directos\n' +
     '2) Crear chat grupal\n' +
-    '3) Enviar Mensajes grupales\n' +
-    '4) Enviar archivos\n' +
+    '3) Invitar usuario a chat grupal\n' +
+    '4) Enviar Mensajes grupales\n' +
+    '5) Acpetar invitacion a chat grupal\n' +
+    '6) Enviar archivos\n' +
     's) Salir\n' +
     '> '
 
@@ -110,11 +112,13 @@ const main = async () => {
                 // Eliminar Cuenta
                 } else if (admin_option === '4') {
 
+                    await actual_usr.xmpp.stop()
                     try {
                         await actual_usr.deleteAccount()
                         actual_usr = false
                     } catch (error) {
                         print('Error al eliminar cuenta')
+                        print(error)
                     }
                     
                 } else {
@@ -244,9 +248,19 @@ const main = async () => {
                     const grupo = await input('Ingrese el nombre de grupo: ')
                     const msg = await input('Ingrese el mensaje: ')
                     await actual_usr.send_groupChat(grupo, msg)
+
+                // acpetar invitacion a chat grupal
+                } else if (comm_option === '5') {
+                    if (!actual_usr) {
+                        print('> No hay usuario con login')
+                        continue
+                    }
+    
+                    const grupo = await input('Ingrese el nombre de grupo: ')
+                    await actual_usr.accept_invite(grupo)
                     
                 // Enviar archivos
-                } else if (comm_option === '5') {
+                } else if (comm_option === '6') {
                     if (!actual_usr) {
                         print('> No hay usuario con login')
                         continue
