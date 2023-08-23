@@ -1,5 +1,5 @@
 # XMPP-Client
-This is a CLI xmpp client implementation for a xmpp server called *alumchat.xyz*
+This is a CLI xmpp client implementation for a xmpp server called ***alumchat.xyz***
 
 ## 📡 Used Technologies
 
