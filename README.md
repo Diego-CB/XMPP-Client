@@ -1,11 +1,12 @@
 # XMPP-Client
+This is a CLI xmpp client implementation for a xmpp server called *alumchat.xyz*
 
 ## 📡 Used Technologies
 
-- Node Js: Modern syntax, Interpreted Languaje
-- client-library: XMPP conection
+- Node Js 🍵: Modern syntax, Interpreted Languaje
+- @XMPP/client library 🛰️: XMPP connection
 
-## ✅ Implementations
+## ✅ Features
 - [x] Registrar una nueva cuenta en el servidor
 - [x] Iniciar sesión con una cuenta
 - [x] Cerrar sesión con una cuenta
