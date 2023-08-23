@@ -3,8 +3,8 @@ const fs = require('fs');
 const { print } = require('./util')
 
 const admin = {
-    username: 'dacb1',
-    password: 'dacb',
+    username: 'cordova20212admin',
+    password: 'admin',
 }
 
 class User {
@@ -18,6 +18,7 @@ class User {
     #restart_xmpp(admin_usr = false) {
         const username = admin_usr ? admin.username : this.username
         const password = admin_usr ? admin.password : this.password
+        print(username)
         return client({
             service: 'xmpp://alumchat.xyz:5222',
             domain: 'alumchat.xyz',
@@ -138,7 +139,6 @@ class User {
 
     async deleteAccount() {
         const local_xmpp = this.#restart_xmpp(true)
-        print(local_xmpp)
         
         await new Promise((resolve, reject) => {
     
@@ -157,14 +157,14 @@ class User {
             local_xmpp.start().then(() => {
                 print('empezo')
                 // Envía una solicitud IQ para eliminar la cuenta
-                const iq = xml('iq', { type: 'set', id: 'deleteAccount1' },
+                const iq =  xml( 'iq', { type: 'set', id: 'delete-account'},
                     xml('query', { xmlns: 'jabber:iq:register' },
-                        xml('remove', {},
-                            xml('username', {}, this.username)
-                        ),
+                        xml('username', {}, user),
+                        xml('password', {}, password),
+                        xml('remove'),
                     )
                 )
-                print(iq)
+
                 local_xmpp.send(iq)
 
             }).catch((error) => {
@@ -366,9 +366,9 @@ class User {
     async invite_groupChat(grupo, contact) {
 
         try {
-            const invite_stanza = xml( "iq", { xmlns:"jabber:client", to: `${grupo}@conference.alumchat.xyz`, type: "set" },
-                xml("query", { xmlns: "http://jabber.org/protocol/muc#admin" },
-                xml("item", { jid: `${contact}@alumchat.xyz`, affiliation: "member" })
+            const invite_stanza = xml( 'iq', { xmlns:'jabber:client', to: `${grupo}@conference.alumchat.xyz`, type: 'set' },
+                xml('query', { xmlns: 'http://jabber.org/protocol/muc#admin' },
+                xml('item', { jid: `${contact}@alumchat.xyz`, affiliation: 'member' })
             ))
             await this.xmpp.send(invite_stanza)
             print('> Se invito a', contact, 'al grupo', grupo)
@@ -380,10 +380,10 @@ class User {
     }
 
     async accept_invite(grupo) {
-        const accept_stanza = xml("presence", {
-                xmlns:"jabber:client",
+        const accept_stanza = xml('presence', {
+                xmlns:'jabber:client',
                 to: `${grupo}@conference.alumchat.xyz/${this.username}`,
-            }, xml("x", {xmlns:"http://jabber.org/protocol/muc"})
+            }, xml('x', {xmlns:'http://jabber.org/protocol/muc'})
         )
 
         await this.xmpp.send(accept_stanza)
